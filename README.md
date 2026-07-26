@@ -15,9 +15,9 @@ Three skills, one approval label, one rule: **humans merge.**
 - [`skills/mag-build`](skills/mag-build/SKILL.md) — claims the next safe
   `agent-ready` issue, implements only its contract, verifies it, and opens a
   PR. Runs repeatedly under `/loop /mag-build`.
-- [`skills/mag-review`](skills/mag-review/SKILL.md) — reviews open PRs against
-  their linked issue and required CI, then posts a three-group verdict. Runs
-  repeatedly under `/loop /mag-review`.
+- [`skills/mag-review`](skills/mag-review/SKILL.md) — reviews the PRs
+  `mag-build` opened against their linked issue and required CI, then posts a
+  three-group verdict. Runs repeatedly under `/loop /mag-review`.
 
 There is no engine and no daemon. The scheduler is Claude Code's built-in
 `/loop`; the durable state is GitHub Issues, labels, PRs, and CI. The `mag-`
@@ -104,7 +104,7 @@ passes, and your usage, before leaving a new installation unattended.
 |---|---|---|
 | `agent-ready` | **Human only** | The contract is approved; an agent may build it |
 | `blocked` | Builder | A specific question is waiting on a human |
-| `agent-building` | Builder | Claimed and in progress |
+| `agent-building` | Builder | Claimed and in progress; released on every exit |
 | `loop-approved` | Reviewer | No must-fix finding, required checks green, no conflict |
 | `loop-changes-requested` | Reviewer | Must-fix findings; back to the builder |
 | `needs-human-review` | Either | Scope conflict, missing CI, or a product decision |
@@ -112,6 +112,18 @@ passes, and your usage, before leaving a new installation unattended.
 
 `loop-approved` is **evidence for your merge decision, not permission for
 anything to merge.**
+
+`agent-building` is the one label with a lifecycle worth understanding. The
+builder adds it when it claims an issue and drops it on every way out — the PR
+opens, the issue gets blocked, or the claim is abandoned because someone else
+took it. Because the pick query only returns *unassigned* issues, a stale claim
+would strand that issue permanently, so each build pass also sweeps for
+`agent-building` issues with no open PR and releases them. That recovers work
+left behind by a crashed pass or a PR closed without merging.
+
+By default `mag-review` only reviews branches named `mag/*`, which is what
+`mag-build` produces. It will not touch your teammates' PRs or Dependabot's
+unless you widen that filter in the skill.
 
 ## The rules that make it work
 

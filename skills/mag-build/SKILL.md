@@ -61,14 +61,43 @@ retrying a decision only a human can make.
 
 ## 2. Pick
 
+### First, release abandoned work
+
+An issue carries `agent-building` while a pass builds it. If that pass crashed,
+or its pull request was closed without merging, the issue stays claimed
+forever — and because the pick query below only returns unassigned issues, no
+later pass will ever see it again. Sweep for that before picking:
+
 ```bash
-gh issue list --state open --label agent-ready --search "no:assignee" \
+gh issue list --state open --label agent-building --json number,title,assignees,url
+gh pr list --state open --json number,body,url
+```
+
+Release an `agent-building` issue only when **both** are true: its number
+appears in no open pull request body as `Closes #N`, and it is assigned to you
+or to nobody. Never strip a label or an assignee off work a person has taken —
+a human who picked up a stalled issue by hand looks exactly like an orphan from
+the outside, and the difference is the assignee:
+
+```bash
+gh issue edit N --remove-label agent-building --remove-assignee @me
+```
+
+### Then pick
+
+Put every filter in the query itself. A filter that lives only in prose is one
+the next pass can forget, and the one that matters here keeps the builder off
+work a human has gated:
+
+```bash
+gh issue list --state open \
+  --search "label:agent-ready -label:blocked no:assignee sort:created-asc" \
   --json number,title,labels,createdAt,url
 ```
 
-Take issues that are labeled `agent-ready`, unassigned, and **not** labeled
-`blocked`. Then read each candidate's body for a `Blocked by #N` section and
-check every referenced issue:
+Confirm from the returned labels that each candidate really is `agent-ready`
+and really is not `blocked`. Then read each candidate's body for a
+`Blocked by #N` section and check every issue it names:
 
 ```bash
 gh issue view N --json state,title
@@ -89,8 +118,13 @@ gh issue edit N --add-assignee @me --add-label agent-building
 ```
 
 Re-fetch the issue immediately afterwards. If it is now assigned to someone
-else, labeled `blocked`, or no longer `agent-ready`, drop it and return to
-step 2.
+else, labeled `blocked`, or no longer `agent-ready`, release your own claim
+before returning to step 2 — dropping it silently leaves the issue assigned to
+you and labeled `agent-building` while somebody else works on it:
+
+```bash
+gh issue edit N --remove-label agent-building --remove-assignee @me
+```
 
 The assignee is a **cooperative lock between people**, not an atomic one. Two
 sessions authenticated as the same account cannot reliably lock each other, so
@@ -159,10 +193,20 @@ never enable auto-merge.
 
 ## 8. Blocked
 
-Comment **one specific question a human can answer asynchronously**, apply the
-`blocked` label, and unassign yourself. Leave `agent-ready` in place: step 2
-excludes `blocked`, so the issue reappears in the queue only after a human
-answers and removes that label.
+Comment **one specific question a human can answer asynchronously**, then
+release the issue completely:
+
+```bash
+gh issue edit N --add-label blocked --remove-label agent-building --remove-assignee @me
+```
+
+Removing `agent-building` matters as much as unassigning. That label is the
+claim that an agent is working on this right now; leaving it behind makes a
+blocked issue indistinguishable from live work, both to you and to anything
+you later build on top of these labels.
+
+Leave `agent-ready` in place. The pick query excludes `blocked`, so the issue
+reappears in the queue only after a human answers and removes that label.
 
 Never write "this is unclear". State the exact decision to be made, the options
 you see, your recommendation, and which acceptance criterion it affects. Then

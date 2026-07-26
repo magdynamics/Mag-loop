@@ -73,8 +73,8 @@ const contracts = [
   [build, "git status --porcelain", "builder must refuse to run on a dirty worktree"],
   [build, "defaultBranchRef", "builder must detect the default branch"],
   [build, "no:assignee", "builder must only claim unassigned issues"],
-  [build, "not** labeled `blocked`", "builder must skip blocked issues"],
-  [build, "Blocked by #N", "builder must respect blocked-by chains"],
+  [build, "-label:blocked", "builder's pick query must exclude blocked issues itself, not in prose"],
+  [build, "sort:created-asc", "builder must take the oldest ready issue first"],
   [build, "loop-stuck", "builder must cap repair rounds and escalate"],
   [build, "If two rounds have already happened", "builder must stop after two failed repair rounds"],
   [build, "needs-human-review", "builder must honour the human escalation label"],
@@ -84,6 +84,10 @@ const contracts = [
 
   [review, "--required", "reviewer must inspect required checks specifically"],
   [review, "re-fetch it", "reviewer must re-check the head sha before posting"],
+  [review, "gh pr edit NUMBER --add-label", "reviewer must be given the label commands, not just a table"],
+  [review, "isDraft,headRefName,", "reviewer must request the head branch in its PR listing"],
+  [review, "starts with `mag/`", "reviewer must scope itself to builder branches by default"],
+  [review, "Skip every other branch", "reviewer must say what to do with PRs outside its scope"],
   [review, "not treat absent CI as green", "reviewer must escalate when CI is unconfigured"],
   [review, "SCOPE-CONFLICT", "reviewer must escalate acceptance/non-goal conflicts"],
   [review, "Never push commits", "reviewer must not push to the branch it reviews"],
@@ -106,6 +110,34 @@ const FIX_MARKER = "Mag-loop fix round N";
 check(review?.includes(REVIEW_MARKER), `reviewer must stamp its verdict "${REVIEW_MARKER}"`);
 check(build?.includes(REVIEW_MARKER), `builder must read the same verdict marker "${REVIEW_MARKER}"`);
 check(build?.includes(FIX_MARKER), `builder must stamp and count repair rounds as "${FIX_MARKER}"`);
+
+// Same coupling, one skill further back: the builder honours blocked-by chains
+// by parsing a section only the spec skill ever writes.
+const BLOCKED_BY = "Blocked by #N";
+check(spec?.includes("## Blocked by"), "spec must emit the Blocked by section the builder parses");
+check(spec?.includes(BLOCKED_BY), `spec must document the "${BLOCKED_BY}" form it writes`);
+check(build?.includes(BLOCKED_BY), `builder must parse the same "${BLOCKED_BY}" form`);
+
+// agent-building is a claim on an issue. Every path that stops working an issue
+// has to drop it, or the issue is stranded: the pick query only returns
+// unassigned issues, so a stale claim is permanent.
+const RELEASE = "--remove-label agent-building --remove-assignee @me";
+check(
+  build?.includes(`gh issue edit N --add-label blocked ${RELEASE}`),
+  "builder must release agent-building when blocking an issue",
+);
+check(
+  build?.includes("appears in no open pull request body as `Closes #N`"),
+  "builder must reclaim issues stranded by a crashed pass or a closed pull request",
+);
+check(
+  build?.includes("assigned to you or to nobody"),
+  "builder's reclaim sweep must not strip work a human has taken",
+);
+check(
+  (build?.match(new RegExp(RELEASE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length >= 3,
+  "builder must release its claim on all three exit paths: reclaim, abandoned claim, and blocked",
+);
 
 for (const [name, text] of Object.entries(skills)) {
   check(!/\bLinear\b/.test(text), `skills/${name}/SKILL.md still references Linear; this port uses GitHub Issues`);

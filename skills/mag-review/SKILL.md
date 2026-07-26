@@ -14,8 +14,18 @@ and never expand scope.
 ## 1. Find a pull request that needs review
 
 ```bash
-gh pr list --state open --json number,title,labels,isDraft,headRefOid,updatedAt,url
+gh pr list --state open \
+  --json number,title,labels,isDraft,headRefName,headRefOid,updatedAt,url
 ```
+
+**Review only pull requests `mag-build` opened** — their `headRefName` starts
+with `mag/`. Skip every other branch.
+
+That filter is deliberate. Without it this skill posts verdicts on your
+teammates' pull requests and on bot PRs like Dependabot's, labelling work
+nobody pointed it at. Reviewing everything is a legitimate choice, but make it
+knowingly: drop the branch filter only if you want Mag-loop to review every
+open PR in the repository.
 
 Skip drafts. For each remaining PR, find the most recent comment whose first
 line is `Mag-loop review of <sha>`.
@@ -99,14 +109,32 @@ None.
 Yes — automated review evidence is complete. A human still makes the merge decision.
 ```
 
-Then set labels to match the verdict. Check which labels exist before removing
-one, so removing an absent label does not fail the command.
+Then set labels to match the verdict. Read the current labels first and pass
+`--remove-label` only for labels actually present — removing an absent label
+fails the command, and failing here leaves a posted verdict with labels that
+contradict it:
 
-| Verdict | Add | Remove |
+```bash
+gh pr view NUMBER --json labels --jq '.labels[].name'
+```
+
+| Verdict | Add | Remove if present |
 |---|---|---|
 | No must-fix, no escalation | `loop-approved` | `loop-changes-requested` |
 | Must-fix findings present | `loop-changes-requested` | `loop-approved` |
 | Scope conflict, or no required CI | `needs-human-review` | `loop-approved`, `loop-changes-requested` |
+
+```bash
+# clean verdict
+gh pr edit NUMBER --add-label loop-approved --remove-label loop-changes-requested
+
+# must-fix findings
+gh pr edit NUMBER --add-label loop-changes-requested --remove-label loop-approved
+
+# escalation
+gh pr edit NUMBER --add-label needs-human-review \
+  --remove-label loop-approved,loop-changes-requested
+```
 
 On escalation, set "Safe to merge" to `No — human decision required.`
 
