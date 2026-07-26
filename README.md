@@ -41,42 +41,37 @@ test, and security checks.
 
 ## Install
 
-Paste this into Claude Code, inside the repo where you want the factory:
+Inside the repository you want the factory in:
 
-```text
-Set up Mag-loop from https://github.com/magdynamics/Mag-loop.
-
-1. Copy these files from that repo into this repo, preserving their contents:
-   skills/mag-spec/SKILL.md   → .claude/skills/mag-spec/SKILL.md
-   skills/mag-build/SKILL.md  → .claude/skills/mag-build/SKILL.md
-   skills/mag-review/SKILL.md → .claude/skills/mag-review/SKILL.md
-
-2. Check `claude --version` is 2.1.71 or newer.
-
-3. Check that `gh auth status` and `gh repo view` both work. Detect this
-   repository's real default branch; do not assume it is main. Confirm the
-   authenticated account can push here.
-
-4. Create these labels, ignoring any that already exist:
-   agent-ready, blocked, agent-building, loop-approved,
-   loop-changes-requested, needs-human-review, loop-stuck
-
-5. List the required status checks on the default branch. If there are none,
-   tell me plainly that Mag-loop will escalate every PR for human review until
-   I configure at least one, and ask whether I want to continue anyway.
-
-6. Confirm all three SKILL.md files have valid YAML frontmatter. Tell me to run
-   `/reload-skills` (or restart Claude Code), then have me confirm `/skills`
-   lists mag-spec, mag-build, and mag-review.
-
-7. Smoke test by listing: open issues labeled agent-ready that are unassigned
-   and not blocked; the default branch and its required checks; open pull
-   requests with their Mag-loop labels. If every read succeeds and all three
-   skills appear, tell me how to run my first spec and loop.
+```bash
+scripts/install.sh --dry-run   # report what would change
+scripts/install.sh             # install here
+scripts/install.sh --target ../myapp
 ```
 
-No placeholders to replace — `gh` infers the repository from the working
-directory.
+It copies the three skills into `.claude/skills/`, creates the seven labels,
+and checks your prerequisites — Claude Code's version, `gh` authentication,
+and whether the default branch has a required status check. Every step is
+idempotent, so re-running is also how you upgrade.
+
+Then run `/reload-skills` in Claude Code and confirm `/skills` lists
+`mag-spec`, `mag-build`, and `mag-review`.
+
+## Share it with a team
+
+```bash
+scripts/package.sh             # -> dist/mag-loop-0.1.0.tar.gz and .zip
+```
+
+That builds a self-contained package holding the three skills, the installer,
+and [the team guide](docs/TEAM-GUIDE.md) — and nothing else, so the validator,
+CI, and `verify-loop` stay behind. It validates before packaging. Hand the
+archive to a developer, or attach it to a GitHub Release.
+
+**[docs/TEAM-GUIDE.md](docs/TEAM-GUIDE.md) is what to read before a first run.**
+It covers writing acceptance criteria the builder can execute, reading a
+verdict, who owns which label, and when to use an ordinary Claude Code session
+instead.
 
 ## Daily rhythm
 

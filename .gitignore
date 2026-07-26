@@ -9,3 +9,6 @@ build/
 
 # Loop run state is per-working-copy, not shared history.
 .mag-loop/
+
+# Built packages. Run scripts/package.sh, or attach one to a GitHub Release.
+dist/
