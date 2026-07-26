@@ -121,6 +121,14 @@ for (const [, target] of readme.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
 check(readme.includes("/reload-skills"), "README must tell the user to reload skills after installing");
 check(readme.includes("humans merge"), "README must state the governing rule");
 
+// The product is "Mag-loop" and the repository is magdynamics/Mag-loop. Both
+// have already been spelled other ways; an install prompt pointing at the old
+// repository name sends users somewhere that only works by GitHub redirect.
+for (const [name, text] of [["README.md", readme], ...Object.entries(skills)]) {
+  check(!text.includes("Mag Loop"), `${name} spells the product "Mag Loop"; it is "Mag-loop"`);
+  check(!text.includes("Mag-Loop-"), `${name} references the old repository name Mag-Loop-`);
+}
+
 if (failures.length) {
   console.error(`Mag-loop validation failed (${failures.length}):\n`);
   for (const failure of failures) console.error(`  - ${failure}`);

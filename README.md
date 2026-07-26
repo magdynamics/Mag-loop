@@ -44,7 +44,7 @@ test, and security checks.
 Paste this into Claude Code, inside the repo where you want the factory:
 
 ```text
-Set up Mag-loop from https://github.com/magdynamics/Mag-Loop-.
+Set up Mag-loop from https://github.com/magdynamics/Mag-loop.
 
 1. Copy these files from that repo into this repo, preserving their contents:
    skills/mag-spec/SKILL.md   → .claude/skills/mag-spec/SKILL.md
