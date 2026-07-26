@@ -1,4 +1,4 @@
-# Mag Loop
+# Mag-loop
 
 Three Claude Code skills that turn GitHub Issues plus GitHub pull requests into
 a small, human-gated software factory:
@@ -33,10 +33,10 @@ prefix keeps these from colliding with bundled commands like `/review`.
 
 That last one is not optional in spirit. `mag-review` refuses to apply
 `loop-approved` to a repository with no required checks — it escalates to a
-human instead. Mag Loop does not treat missing CI as green, so without required
+human instead. Mag-loop does not treat missing CI as green, so without required
 checks you get a review assistant rather than a factory.
 
-Mag Loop does not create CI for your project. Your repository owns its build,
+Mag-loop does not create CI for your project. Your repository owns its build,
 test, and security checks.
 
 ## Install
@@ -44,7 +44,7 @@ test, and security checks.
 Paste this into Claude Code, inside the repo where you want the factory:
 
 ```text
-Set up Mag Loop from https://github.com/magdynamics/Mag-Loop-.
+Set up Mag-loop from https://github.com/magdynamics/Mag-Loop-.
 
 1. Copy these files from that repo into this repo, preserving their contents:
    skills/mag-spec/SKILL.md   → .claude/skills/mag-spec/SKILL.md
@@ -62,7 +62,7 @@ Set up Mag Loop from https://github.com/magdynamics/Mag-Loop-.
    loop-changes-requested, needs-human-review, loop-stuck
 
 5. List the required status checks on the default branch. If there are none,
-   tell me plainly that Mag Loop will escalate every PR for human review until
+   tell me plainly that Mag-loop will escalate every PR for human review until
    I configure at least one, and ask whether I want to continue anyway.
 
 6. Confirm all three SKILL.md files have valid YAML frontmatter. Tell me to run
@@ -71,7 +71,7 @@ Set up Mag Loop from https://github.com/magdynamics/Mag-Loop-.
 
 7. Smoke test by listing: open issues labeled agent-ready that are unassigned
    and not blocked; the default branch and its required checks; open pull
-   requests with their Mag Loop labels. If every read succeeds and all three
+   requests with their Mag-loop labels. If every read succeeds and all three
    skills appear, tell me how to run my first spec and loop.
 ```
 
@@ -127,7 +127,7 @@ anything to merge.**
 
 ## Credit and what changed
 
-Mag Loop is a port of [Finn-loop](https://github.com/finna/Finn-loop) by Alex
+Mag-loop is a port of [Finn-loop](https://github.com/finna/Finn-loop) by Alex
 Finn (MIT), adapted for how Mag Dynamics already works. The architecture — three
 skills, `AC-N`/`NG-N` contracts, the `agent-ready` human gate, the three-group
 verdict, "humans merge" — is his. Deliberate differences:
@@ -139,7 +139,7 @@ verdict, "humans merge" — is his. Deliberate differences:
   checks before claiming.
 - **A repair-round cap, built in.** Finn-loop lists self-convergence as the
   first thing to add after the starter is stable. The builder counts
-  `Mag Loop fix round N` comments and escalates to `loop-stuck` after two, so an
+  `Mag-loop fix round N` comments and escalates to `loop-stuck` after two, so an
   unattended loop cannot ping-pong with the reviewer indefinitely.
 - **`scripts/validate.mjs`** asserts the safety properties of all three skills
   in CI — that the builder still refuses dirty worktrees, that the reviewer
@@ -156,7 +156,7 @@ Those apply here unchanged.
 A standalone Python loop engine (`magloop`) for grinding a single goal to green
 against a verify command, with its own on-disk state and iteration budget. I
 built it before seeing Finn-loop, and it is **not part of this architecture** —
-Mag Loop proper is prompt-only. It is kept because it works and it is tested;
+Mag-loop proper is prompt-only. It is kept because it works and it is tested;
 delete `tools/verify-loop/` if you do not want it. See
 [its design notes](tools/verify-loop/DESIGN.md).
 

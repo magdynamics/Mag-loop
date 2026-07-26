@@ -1,9 +1,9 @@
 ---
 name: mag-build
-description: Claim the next safe agent-ready GitHub issue, implement only its contract, and open a pull request. Also repairs Mag Loop review feedback on existing PRs. Use when asked to run Mag Loop's builder or work the approved queue. Designed for /loop; one pass does exactly one unit of work.
+description: Claim the next safe agent-ready GitHub issue, implement only its contract, and open a pull request. Also repairs Mag-loop review feedback on existing PRs. Use when asked to run Mag-loop's builder or work the approved queue. Designed for /loop; one pass does exactly one unit of work.
 ---
 
-# Mag Loop builder
+# Mag-loop builder
 
 **One pass = one unit of work.** Either repair review feedback on one existing
 pull request, or build one issue end to end. Under `/loop`, each iteration runs
@@ -42,15 +42,15 @@ deliberately left the automated queue and are waiting on a person.
 
 If a PR remains, take the **least recently updated** one and:
 
-1. Read its linked issue and the most recent `Mag Loop review of <sha>` comment.
-2. Count existing `Mag Loop fix round N` comments on the PR. **If two rounds
+1. Read its linked issue and the most recent `Mag-loop review of <sha>` comment.
+2. Count existing `Mag-loop fix round N` comments on the PR. **If two rounds
    have already happened**, add `loop-stuck`, remove `loop-changes-requested`,
    comment explaining that two repair rounds did not converge, and end the pass.
    An agent must not argue with a reviewer indefinitely.
 3. Otherwise check out the branch and fix **only** the items under "Must fix
    before merge". Do not opportunistically improve anything else.
 4. Run the relevant checks, push, remove `loop-changes-requested`, and comment
-   `Mag Loop fix round N` followed by what changed.
+   `Mag-loop fix round N` followed by what changed.
 
 End the pass.
 

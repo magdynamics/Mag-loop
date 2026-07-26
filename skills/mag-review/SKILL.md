@@ -1,9 +1,9 @@
 ---
 name: mag-review
-description: Review one open pull request against its linked GitHub issue and required CI checks, then post a three-group verdict and set Mag Loop labels. Use when asked to run Mag Loop's reviewer or work its review queue. Designed for /loop; never merges, never pushes code.
+description: Review one open pull request against its linked GitHub issue and required CI checks, then post a three-group verdict and set Mag-loop labels. Use when asked to run Mag-loop's reviewer or work its review queue. Designed for /loop; never merges, never pushes code.
 ---
 
-# Mag Loop reviewer
+# Mag-loop reviewer
 
 **One pass = one pull request reviewed.** Under `/loop`, each iteration runs
 this skill once.
@@ -18,7 +18,7 @@ gh pr list --state open --json number,title,labels,isDraft,headRefOid,updatedAt,
 ```
 
 Skip drafts. For each remaining PR, find the most recent comment whose first
-line is `Mag Loop review of <sha>`.
+line is `Mag-loop review of <sha>`.
 
 Skip the PR when that recorded sha equals its current `headRefOid` **and** it
 already carries `loop-approved`, `loop-changes-requested`, `needs-human-review`,
@@ -66,7 +66,7 @@ gh pr checks NUMBER --required --json bucket,name,state,link
 - A **failed** required check is a `[CI]` must-fix finding.
 - A **merge conflict** is a `[DEFECT]` must-fix finding.
 - **No required checks configured at all**: escalate to a human and do not
-  apply `loop-approved`. Mag Loop does not treat absent CI as green — that is
+  apply `loop-approved`. Mag-loop does not treat absent CI as green — that is
   the difference between evidence and assumption.
 
 Gather all evidence against one exact `headRefOid`, and **re-fetch it
@@ -77,7 +77,7 @@ wrong commit is worse than no verdict.
 ## 4. Post exactly one verdict
 
 ```md
-Mag Loop review of <sha>
+Mag-loop review of <sha>
 
 CI: required checks passed | failed | not configured
 Mergeability: clean | conflicting
@@ -115,7 +115,7 @@ may represent a separate high-risk gate that a human added deliberately.
 
 Escalation deliberately removes a PR from the automated repair queue. A human
 must resolve the cause — amend the issue, configure CI, make the product call —
-and remove the label before Mag Loop reviews that unchanged commit again.
+and remove the label before Mag-loop reviews that unchanged commit again.
 
 ## 5. Hard limits
 

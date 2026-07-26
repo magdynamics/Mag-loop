@@ -1,9 +1,9 @@
 ---
 name: mag-spec
-description: Interview the user about a rough idea until the behavior is unambiguous, then file a build-ready GitHub issue. Use when asked to run Mag Loop's spec interview, write a queue-ready issue, or plan a feature before building it. Interactive — the user must be present; never run this under /loop.
+description: Interview the user about a rough idea until the behavior is unambiguous, then file a build-ready GitHub issue. Use when asked to run Mag-loop's spec interview, write a queue-ready issue, or plan a feature before building it. Interactive — the user must be present; never run this under /loop.
 ---
 
-# Mag Loop spec interview
+# Mag-loop spec interview
 
 Turn a rough idea into a GitHub issue so complete that a build agent needs
 nothing else. Research the code, interview the user in rounds until the

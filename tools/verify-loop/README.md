@@ -1,6 +1,6 @@
 # verify-loop (`magloop`)
 
-**Not part of Mag Loop.** Mag Loop proper is the three prompt-only skills in
+**Not part of Mag-loop.** Mag-loop proper is the three prompt-only skills in
 [`skills/`](../../skills) driven by Claude Code's `/loop`, with GitHub as the
 durable state. This directory holds a separate, standalone Python loop engine
 built before that architecture was settled. It works and it is tested; delete

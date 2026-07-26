@@ -76,7 +76,6 @@ const contracts = [
   [build, "not** labeled `blocked`", "builder must skip blocked issues"],
   [build, "Blocked by #N", "builder must respect blocked-by chains"],
   [build, "loop-stuck", "builder must cap repair rounds and escalate"],
-  [build, "Mag Loop fix round N", "builder must label repair rounds so they can be counted"],
   [build, "If two rounds have already happened", "builder must stop after two failed repair rounds"],
   [build, "needs-human-review", "builder must honour the human escalation label"],
   [build, "Closes #N", "builder must link the PR to its issue"],
@@ -84,7 +83,6 @@ const contracts = [
   [build, "never enable auto-merge", "builder must not merge"],
 
   [review, "--required", "reviewer must inspect required checks specifically"],
-  [review, "Mag Loop review of <sha>", "reviewer must record the reviewed commit sha"],
   [review, "re-fetch it", "reviewer must re-check the head sha before posting"],
   [review, "not treat absent CI as green", "reviewer must escalate when CI is unconfigured"],
   [review, "SCOPE-CONFLICT", "reviewer must escalate acceptance/non-goal conflicts"],
@@ -98,6 +96,16 @@ for (const [text, needle, message] of contracts) {
 
 check(!build?.includes("origin/main"), "builder hardcodes origin/main instead of detecting the default branch");
 check(!spec?.includes("agent-ready` label yourself"), "spec must never apply the approval label");
+
+// The two skills talk to each other through PR comment markers: the reviewer
+// writes them, the builder greps for them. Renaming one file and not the other
+// breaks nothing loudly — the repair queue just silently stops draining.
+const REVIEW_MARKER = "Mag-loop review of <sha>";
+const FIX_MARKER = "Mag-loop fix round N";
+
+check(review?.includes(REVIEW_MARKER), `reviewer must stamp its verdict "${REVIEW_MARKER}"`);
+check(build?.includes(REVIEW_MARKER), `builder must read the same verdict marker "${REVIEW_MARKER}"`);
+check(build?.includes(FIX_MARKER), `builder must stamp and count repair rounds as "${FIX_MARKER}"`);
 
 for (const [name, text] of Object.entries(skills)) {
   check(!/\bLinear\b/.test(text), `skills/${name}/SKILL.md still references Linear; this port uses GitHub Issues`);
@@ -114,7 +122,7 @@ check(readme.includes("/reload-skills"), "README must tell the user to reload sk
 check(readme.includes("humans merge"), "README must state the governing rule");
 
 if (failures.length) {
-  console.error(`Mag Loop validation failed (${failures.length}):\n`);
+  console.error(`Mag-loop validation failed (${failures.length}):\n`);
   for (const failure of failures) console.error(`  - ${failure}`);
   process.exit(1);
 }

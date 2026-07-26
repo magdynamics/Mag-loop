@@ -1,4 +1,4 @@
-# Mag Loop — design notes
+# Mag-loop — design notes
 
 ## The problem with chat-style loops
 
@@ -17,7 +17,7 @@ coding for three reasons:
    condition. A confused model will keep going, and each round costs real money
    and real edits to real files.
 
-Mag Loop is built around fixing exactly those three.
+Mag-loop is built around fixing exactly those three.
 
 ## Three properties
 
