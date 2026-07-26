@@ -41,21 +41,47 @@ test, and security checks.
 
 ## Install
 
-Inside the repository you want the factory in:
+The three skills are **repo-agnostic** — they infer the repository from the
+working directory, and nothing in them names a project. So install them once
+for your whole machine, then enable each project you want the loop in. Labels
+are the only per-repository part.
+
+**Once, for every project:**
 
 ```bash
-scripts/install.sh --dry-run   # report what would change
-scripts/install.sh             # install here
+scripts/install.sh --global     # -> ~/.claude/skills/
+```
+
+Then `/reload-skills` in Claude Code. `/mag-spec`, `/mag-build`, and
+`/mag-review` now exist in **every** repository you open.
+
+**Then once per project:**
+
+```bash
+cd ~/code/some-project
+/path/to/mag-loop/install.sh --labels-only
+```
+
+That creates the seven labels and tells you whether the default branch has a
+required status check. Repeat it for each repo — there is nothing to copy and
+nothing to keep in sync.
+
+Add `--dry-run` to either to report without changing anything. Every step is
+idempotent, so re-running `--global` is also how you upgrade every project at
+once.
+
+<details>
+<summary>Single-repository install</summary>
+
+```bash
+scripts/install.sh                     # skills into ./.claude/skills/ plus labels
 scripts/install.sh --target ../myapp
 ```
 
-It copies the three skills into `.claude/skills/`, creates the seven labels,
-and checks your prerequisites — Claude Code's version, `gh` authentication,
-and whether the default branch has a required status check. Every step is
-idempotent, so re-running is also how you upgrade.
-
-Then run `/reload-skills` in Claude Code and confirm `/skills` lists
-`mag-spec`, `mag-build`, and `mag-review`.
+A repository copy **shadows** the global one, so prefer `--global` unless you
+deliberately want one project pinned to a different version. The installer
+warns you when both exist.
+</details>
 
 ## Share it with a team
 

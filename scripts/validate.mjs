@@ -159,6 +159,22 @@ for (const name of expected) {
   );
 }
 
+// Mag-loop is meant to serve many repositories from one install. If the
+// installer loses --global, every project silently goes back to needing its own
+// copy of the skills, which then drift apart version by version.
+const installer = read("scripts/install.sh");
+check(installer.includes("--global"), "installer must support a machine-wide install");
+check(installer.includes("--labels-only"), "installer must support enabling a project without copying skills");
+check(installer.includes('"$HOME/.claude/skills"'), "global install must target ~/.claude/skills");
+check(
+  installer.includes("shadows the global one"),
+  "installer must warn that a repository copy shadows the global install",
+);
+check(
+  !/sed -n '[0-9]+,[0-9]+p' "\$\{BASH_SOURCE/.test(installer),
+  "installer --help must not depend on a hardcoded line range; editing the header would truncate it",
+);
+
 const readme = read("README.md");
 for (const [, target] of readme.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
   if (!target.startsWith("http") && !target.startsWith("#")) {

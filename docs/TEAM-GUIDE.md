@@ -13,22 +13,55 @@ Read this once before your first run. It is the whole contract.
 
 ## 1. Install
 
-From the package directory, inside the repository you want the factory in:
+Mag-loop is a **machine-wide skill set, not a per-project one.** The three
+skills name no repository — they infer it from your working directory — so you
+install them once and they work everywhere. Only the labels are per-project.
+
+**Once per machine:**
 
 ```bash
-./install.sh                    # install here
-./install.sh --target ../myapp  # install elsewhere
-./install.sh --dry-run          # report, change nothing
+./install.sh --global      # -> ~/.claude/skills/
 ```
 
-It copies the three skills into `.claude/skills/`, creates seven labels, and
-checks your prerequisites. It is safe to re-run — that is also how you upgrade.
+Then run `/reload-skills` in Claude Code, and confirm `/skills` lists
+`mag-spec`, `mag-build`, and `mag-review`. Those commands now exist in every
+repository you open.
 
-Then run `/reload-skills` in Claude Code and confirm `/skills` lists `mag-spec`,
-`mag-build`, and `mag-review`.
+**Once per project you want the loop in:**
+
+```bash
+cd ~/code/some-project
+/path/to/mag-loop/install.sh --labels-only
+```
+
+That creates the seven labels and reports whether the default branch has a
+required status check. Nothing gets copied into the project, so there is no
+per-project version to keep in sync — upgrading is one `--global` re-run.
+
+Add `--dry-run` to either command to report without changing anything. Both are
+idempotent.
 
 You need: a GitHub repo with a working `origin`, Claude Code 2.1.71 or newer
 (`/loop` arrived there), and `gh` authenticated with write access.
+
+### Working across several projects
+
+The loop is repository-scoped at run time, not machine-scoped: each pass reads
+the queue of whichever repo you are in. So `/loop /mag-build` in
+`~/code/project-a` will only ever touch project A's issues and branches.
+
+Two consequences worth knowing:
+
+- **One builder loop per repository**, and one Claude Code session per loop.
+  Two builder loops in the same repo can race on the same issue. Two loops in
+  *different* repos are fine and independent.
+- A project you have not run `--labels-only` on has no `agent-ready` label, so
+  the builder finds an empty queue and ends the pass. It fails safe rather than
+  inventing work.
+
+If you pin one project to an older version by installing into its
+`.claude/skills/`, that copy **shadows** the global one for that project only.
+The installer warns when both exist.
 
 ### The one prerequisite people skip
 

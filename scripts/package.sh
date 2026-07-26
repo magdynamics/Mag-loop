@@ -45,14 +45,21 @@ One rule: **humans merge.**
 
 ## Install
 
-Inside the repository you want the factory in:
+Mag-loop is a machine-wide skill set. The skills name no repository — they infer
+it from your working directory — so install them once, then enable each project.
 
 ```bash
-./install.sh              # or --dry-run first, or --target ../myapp
+./install.sh --global                    # once per machine -> ~/.claude/skills/
+
+cd ~/code/some-project
+/path/to/this/install.sh --labels-only   # once per project: labels + CI check
 ```
 
 Then run `/reload-skills` in Claude Code and confirm `/skills` lists
-`mag-spec`, `mag-build`, and `mag-review`.
+`mag-spec`, `mag-build`, and `mag-review` — in any repository.
+
+Add `--dry-run` to either command to report without changing anything. Both are
+idempotent, and re-running `--global` upgrades every project at once.
 
 Requires a GitHub repo with a working `origin`, Claude Code 2.1.71+, and `gh`
 authenticated with write access. You also want at least one **required** status
@@ -67,7 +74,7 @@ who owns each, and when to use an ordinary Claude Code session instead.
 
 ## Contents
 
-    install.sh              installer; safe to re-run, and how you upgrade
+    install.sh              --global once, --labels-only per project
     TEAM-GUIDE.md           read this before your first run
     skills/mag-spec/        interviews you, files the issue
     skills/mag-build/       claims one issue, opens one PR

@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 #
-# Install Mag-loop into a target repository.
+# Install Mag-loop.
 #
-# Copies the three skills into .claude/skills/, creates the labels the loop
-# needs, and checks the prerequisites that otherwise fail confusingly hours
-# later. Safe to re-run: every step is idempotent.
+# The skills are repo-agnostic — they infer the repository from the working
+# directory — so install them once for your whole machine, then enable each
+# project separately. Labels are the only per-repository part.
 #
-#   ./install.sh                    # install into the current repository
-#   ./install.sh --target ../myapp  # install somewhere else
-#   ./install.sh --dry-run          # report what would change, touch nothing
-#   ./install.sh --no-labels        # skip label creation
+#   ./install.sh --global          # install skills for EVERY project (~/.claude/skills)
+#   ./install.sh --labels-only     # enable the current repo: labels + CI check
+#   ./install.sh                   # install into this repo only, plus labels
+#   ./install.sh --target ../myapp # ...or into another repo
+#
+# Add --dry-run to any of these to report without changing anything.
+# Safe to re-run: every step is idempotent, and re-running is how you upgrade.
 #
 set -euo pipefail
 
@@ -19,6 +22,7 @@ SKILLS=(mag-spec mag-build mag-review)
 PACKAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [[ -d "$PACKAGE_DIR/skills" ]] || PACKAGE_DIR="$(cd "$PACKAGE_DIR/.." && pwd)"
 
+MODE="repo"          # repo | global | labels
 TARGET="$PWD"
 DRY_RUN=0
 DO_LABELS=1
@@ -31,23 +35,38 @@ warn() { printf '  \033[33mwarn\033[0m  %s\n' "$*"; warnings=$((warnings + 1)); 
 bad()  { printf '  \033[31mfail\033[0m  %s\n' "$*"; problems=$((problems + 1)); }
 run()  { if [[ $DRY_RUN -eq 1 ]]; then printf '  would run: %s\n' "$*"; else "$@"; fi; }
 
-usage() { sed -n '3,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0; }
+# Print the header comment block, stopping at the first line that is not a
+# comment. Derived rather than a hardcoded line range, so editing the header
+# above cannot silently truncate --help or leak code into it.
+usage() {
+  awk 'NR > 2 { if (!/^#/) exit; sub(/^# ?/, ""); print }' "${BASH_SOURCE[0]}"
+  exit 0
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --target)   TARGET="${2:?--target needs a directory}"; shift 2 ;;
-    --dry-run)  DRY_RUN=1; shift ;;
-    --no-labels) DO_LABELS=0; shift ;;
-    -h|--help)  usage ;;
+    --global|--user) MODE="global"; DO_LABELS=0; shift ;;
+    --labels-only)   MODE="labels"; shift ;;
+    --target)        TARGET="${2:?--target needs a directory}"; shift 2 ;;
+    --dry-run)       DRY_RUN=1; shift ;;
+    --no-labels)     DO_LABELS=0; shift ;;
+    -h|--help)       usage ;;
     *) say "unknown option: $1"; say "try --help"; exit 2 ;;
   esac
 done
 
 version_at_least() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
 
+case "$MODE" in
+  global) SKILL_ROOT="$HOME/.claude/skills"; SCOPE="every project on this machine" ;;
+  repo)   SKILL_ROOT="$TARGET/.claude/skills"; SCOPE="this repository only" ;;
+  labels) SKILL_ROOT=""; SCOPE="labels for this repository" ;;
+esac
+
 say "Mag-loop installer"
 say "  package: $PACKAGE_DIR"
-say "  target:  $TARGET"
+say "  scope:   $SCOPE"
+[[ -n "$SKILL_ROOT" ]] && say "  skills:  $SKILL_ROOT"
 [[ $DRY_RUN -eq 1 ]] && say "  mode:    dry run, nothing will be changed"
 say ""
 
@@ -61,13 +80,17 @@ for skill in "${SKILLS[@]}"; do
 done
 [[ $problems -eq 0 ]] && ok "package contains all ${#SKILLS[@]} skills"
 
-TARGET="$(cd "$TARGET" 2>/dev/null && pwd || true)"
-if [[ -z "$TARGET" ]]; then
-  bad "target directory does not exist"
-elif ! git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then
-  bad "target is not a git repository: $TARGET"
-else
-  ok "target is a git repository"
+# Only the per-repository modes care where they are run from.
+if [[ "$MODE" != "global" ]]; then
+  TARGET="$(cd "$TARGET" 2>/dev/null && pwd || true)"
+  if [[ -z "$TARGET" ]]; then
+    bad "target directory does not exist"
+  elif ! git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then
+    bad "target is not a git repository: $TARGET"
+  else
+    ok "target is a git repository"
+  fi
+  [[ "$MODE" == "repo" ]] && SKILL_ROOT="$TARGET/.claude/skills"
 fi
 
 if command -v claude >/dev/null 2>&1; then
@@ -81,21 +104,30 @@ else
   warn "claude not on PATH; cannot verify the version that provides /loop"
 fi
 
+# gh is needed now only for label work; the skills need it at run time either way.
+gh_required=0
+[[ "$MODE" == "labels" || $DO_LABELS -eq 1 ]] && gh_required=1
+
 have_gh=0
 if command -v gh >/dev/null 2>&1; then
   if gh auth status >/dev/null 2>&1; then
     have_gh=1
     ok "gh is authenticated"
-  else
+  elif [[ $gh_required -eq 1 ]]; then
     bad "gh is installed but not authenticated; run: gh auth login"
+  else
+    warn "gh is not authenticated; the skills need it at run time"
   fi
+elif [[ $gh_required -eq 1 ]]; then
+  bad "gh is not installed; it is needed to create labels"
 else
-  bad "gh is not installed; the skills call it for every issue, PR, and label"
+  warn "gh is not installed; the skills call it for every issue, PR, and label"
 fi
 
 default_branch=""
-if [[ $have_gh -eq 1 ]]; then
-  if default_branch="$(gh repo view --json defaultBranchRef --jq .defaultBranchRef.name 2>/dev/null)"; then
+if [[ $have_gh -eq 1 && "$MODE" != "global" ]]; then
+  if default_branch="$(git -C "$TARGET" rev-parse --show-toplevel >/dev/null 2>&1 &&
+      cd "$TARGET" && gh repo view --json defaultBranchRef --jq .defaultBranchRef.name 2>/dev/null)"; then
     ok "repository reachable, default branch is $default_branch"
   else
     bad "gh cannot read this repository; check the origin remote and your access"
@@ -110,32 +142,42 @@ fi
 
 # ---- install the skills ----------------------------------------------------
 
-say ""
-say "Installing skills into $TARGET/.claude/skills"
+if [[ "$MODE" != "labels" ]]; then
+  say ""
+  say "Installing skills into $SKILL_ROOT"
+  for skill in "${SKILLS[@]}"; do
+    src="$PACKAGE_DIR/skills/$skill/SKILL.md"
+    dest="$SKILL_ROOT/$skill/SKILL.md"
+    if [[ -f "$dest" ]] && cmp -s "$src" "$dest"; then
+      ok "$skill already up to date"
+      continue
+    fi
+    [[ -f "$dest" ]] && say "  replacing an older copy of $skill"
+    run mkdir -p "$(dirname "$dest")"
+    run cp "$src" "$dest"
+    ok "$skill installed"
+  done
 
-for skill in "${SKILLS[@]}"; do
-  src="$PACKAGE_DIR/skills/$skill/SKILL.md"
-  dest="$TARGET/.claude/skills/$skill/SKILL.md"
-  if [[ -f "$dest" ]] && cmp -s "$src" "$dest"; then
-    ok "$skill already up to date"
-    continue
+  if [[ "$MODE" == "global" ]]; then
+    repo_copies="$(find "$PWD/.claude/skills" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')"
+    if [[ "$repo_copies" != "0" ]]; then
+      warn "this repository also has $repo_copies skill file(s) in .claude/skills"
+      say "  A repository copy shadows the global one. Delete it once the global"
+      say "  install works, or it will keep serving an older version here."
+    fi
   fi
-  [[ -f "$dest" ]] && say "  replacing an older copy of $skill"
-  run mkdir -p "$(dirname "$dest")"
-  run cp "$src" "$dest"
-  ok "$skill installed"
-done
+fi
 
 # ---- labels ----------------------------------------------------------------
 
 if [[ $DO_LABELS -eq 1 ]]; then
   say ""
   say "Creating labels"
-  # name|colour|description
+  name_with_owner="$(cd "$TARGET" && gh repo view --json nameWithOwner --jq .nameWithOwner)"
   while IFS='|' read -r name colour description; do
     [[ -z "$name" ]] && continue
     if run gh label create "$name" --color "$colour" --description "$description" --force \
-        --repo "$(gh repo view --json nameWithOwner --jq .nameWithOwner)" >/dev/null 2>&1; then
+        --repo "$name_with_owner" >/dev/null 2>&1; then
       ok "$name"
     else
       warn "could not create or update label $name"
@@ -153,23 +195,26 @@ fi
 
 # ---- required checks -------------------------------------------------------
 
-say ""
-say "Checking merge evidence"
-required_count=0
-if [[ $have_gh -eq 1 && -n "$default_branch" ]]; then
-  required_count="$(gh api "repos/{owner}/{repo}/branches/$default_branch/protection/required_status_checks" \
-    --jq '.contexts | length' 2>/dev/null || echo 0)"
-fi
-
-if [[ "${required_count:-0}" -gt 0 ]]; then
-  ok "$required_count required status check(s) on $default_branch"
-else
-  warn "no required status checks on ${default_branch:-the default branch}"
+if [[ "$MODE" != "global" ]]; then
   say ""
-  say "  mag-review refuses to apply loop-approved without a required check, so"
-  say "  every pull request will escalate to needs-human-review until you add"
-  say "  one in Settings -> Branches -> Branch protection rules. Mag-loop does"
-  say "  not treat missing CI as green."
+  say "Checking merge evidence"
+  required_count=0
+  if [[ $have_gh -eq 1 && -n "$default_branch" ]]; then
+    required_count="$(cd "$TARGET" && gh api \
+      "repos/{owner}/{repo}/branches/$default_branch/protection/required_status_checks" \
+      --jq '.contexts | length' 2>/dev/null || echo 0)"
+  fi
+
+  if [[ "${required_count:-0}" -gt 0 ]]; then
+    ok "$required_count required status check(s) on $default_branch"
+  else
+    warn "no required status checks on ${default_branch:-the default branch}"
+    say ""
+    say "  mag-review refuses to apply loop-approved without a required check, so"
+    say "  every pull request will escalate to needs-human-review until you add"
+    say "  one in Settings -> Branches -> Branch protection rules. Mag-loop does"
+    say "  not treat missing CI as green."
+  fi
 fi
 
 # ---- done ------------------------------------------------------------------
@@ -180,11 +225,31 @@ if [[ $DRY_RUN -eq 1 ]]; then
   exit 0
 fi
 
-say "Installed. $warnings warning(s)."
+say "Done. $warnings warning(s)."
 say ""
-say "Next:"
-say "  1. Run /reload-skills in Claude Code, or restart it."
-say "  2. Confirm /skills lists mag-spec, mag-build and mag-review."
-say "  3. Run /mag-spec and describe one small piece of work."
-say "  4. Read the issue it files. If the contract is right, apply agent-ready."
-say "  5. Run /loop /mag-build, and watch the first pass before walking away."
+case "$MODE" in
+  global)
+    say "Next:"
+    say "  1. Run /reload-skills in Claude Code, or restart it."
+    say "  2. Confirm /skills lists mag-spec, mag-build and mag-review — in any project."
+    say "  3. Enable each project you want the loop in:"
+    say "       cd /path/to/project && $PACKAGE_DIR/install.sh --labels-only"
+    ;;
+  labels)
+    say "This repository is now enabled. Next:"
+    say "  1. Run /mag-spec here and describe one small piece of work."
+    say "  2. Read the issue it files. If the contract is right, apply agent-ready."
+    say "  3. Run /loop /mag-build, and watch the first pass before walking away."
+    ;;
+  repo)
+    say "Next:"
+    say "  1. Run /reload-skills in Claude Code, or restart it."
+    say "  2. Confirm /skills lists mag-spec, mag-build and mag-review."
+    say "  3. Run /mag-spec and describe one small piece of work."
+    say "  4. Read the issue it files. If the contract is right, apply agent-ready."
+    say "  5. Run /loop /mag-build, and watch the first pass before walking away."
+    say ""
+    say "To use Mag-loop across many projects, install it once with --global"
+    say "instead, then run --labels-only in each project."
+    ;;
+esac
