@@ -29,8 +29,8 @@ that forward. An iteration cannot claim success on its own say-so, and the
 next iteration starts by reading the actual failure text rather than the
 previous iteration's summary of it.
 
-This is why `magloop init` pushes hard for a verify command, and why the skill
-tells the agent to raise it with the user if it cannot name one. A loop with no
+This is why `magloop init` pushes hard for a verify command, and why a run
+without one should be raised with the user before it starts. A loop with no
 gate will spend its whole budget on plausible-looking work.
 
 ### 2. State lives on disk, not in context
@@ -82,7 +82,7 @@ cooperation is not a guardrail.
 
 ## Why the CLI is the only way to mutate state
 
-The agent could edit `state.json` directly. It must not, and the skill says so.
+The agent could edit `state.json` directly. It must not.
 Every guardrail — budget, stall detection, the closed-tasks-plus-green-verify
 conjunction, the refusal to record onto a finished run — is implemented in the
 CLI. Hand-editing the file routes around all of them. Keeping mutation behind
