@@ -174,6 +174,10 @@ check(
   !/sed -n '[0-9]+,[0-9]+p' "\$\{BASH_SOURCE/.test(installer),
   "installer --help must not depend on a hardcoded line range; editing the header would truncate it",
 );
+check(
+  installer.includes("gh api user"),
+  "installer must probe gh with the call it depends on, not `gh auth status`",
+);
 
 const readme = read("README.md");
 for (const [, target] of readme.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {

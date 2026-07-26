@@ -110,13 +110,16 @@ gh_required=0
 
 have_gh=0
 if command -v gh >/dev/null 2>&1; then
-  if gh auth status >/dev/null 2>&1; then
+  # `gh api user` rather than `gh auth status`: the latter reports failure when a
+  # perfectly usable token reports no OAuth scopes, which is how tokens injected
+  # via GH_TOKEN in CI and containers behave. Test the call we actually depend on.
+  if gh api user >/dev/null 2>&1; then
     have_gh=1
     ok "gh is authenticated"
   elif [[ $gh_required -eq 1 ]]; then
-    bad "gh is installed but not authenticated; run: gh auth login"
+    bad "gh cannot reach the GitHub API; run: gh auth login (or check GH_TOKEN)"
   else
-    warn "gh is not authenticated; the skills need it at run time"
+    warn "gh cannot reach the GitHub API; the skills need it at run time"
   fi
 elif [[ $gh_required -eq 1 ]]; then
   bad "gh is not installed; it is needed to create labels"
