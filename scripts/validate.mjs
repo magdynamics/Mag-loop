@@ -144,6 +144,21 @@ for (const [name, text] of Object.entries(skills)) {
   check(!/\bTEAM\b/.test(text), `skills/${name}/SKILL.md left a TEAM placeholder from the Linear original`);
 }
 
+// This repository is its own first target: skills/ is the published source and
+// .claude/skills/ is the installed copy Claude Code actually loads. Two copies
+// drift silently — you edit the source, and the loop keeps running the old one.
+for (const name of expected) {
+  const installed = `.claude/skills/${name}/SKILL.md`;
+  if (!existsSync(new URL(installed, root))) {
+    check(false, `${installed} is missing; copy skills/${name}/SKILL.md there to install it`);
+    continue;
+  }
+  check(
+    read(installed) === skills[name],
+    `${installed} has drifted from skills/${name}/SKILL.md; re-copy the source over it`,
+  );
+}
+
 const readme = read("README.md");
 for (const [, target] of readme.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
   if (!target.startsWith("http") && !target.startsWith("#")) {

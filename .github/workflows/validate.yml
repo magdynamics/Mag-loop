@@ -5,24 +5,23 @@ on:
     branches: ["**"]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  skills:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+
+      # ubuntu-latest ships Node and Python 3, so setting them up explicitly
+      # only adds marketplace actions this repository does not need.
+      - name: Show toolchain
+        run: node --version && python3 --version
+
       - name: Validate skill contracts
         run: node scripts/validate.mjs
 
-  verify-loop:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
       - name: Run verify-loop tests
         working-directory: tools/verify-loop
-        run: python -m unittest discover -s tests
+        run: python3 -m unittest discover -s tests
