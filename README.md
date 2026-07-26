@@ -99,6 +99,12 @@ It covers writing acceptance criteria the builder can execute, reading a
 verdict, who owns which label, and when to use an ordinary Claude Code session
 instead.
 
+**[docs/EVALUATION.md](docs/EVALUATION.md) is how to judge whether it works.**
+Mag-loop has not yet run against a real repository. That document is a three
+phase plan — eleven observable checks on the first watched pass, then output
+quality over five issues, then cost over ten — with the failure signals that
+mean stop and fix rather than push on.
+
 ## Daily rhythm
 
 1. Run `/mag-spec` whenever an idea lands. Read the filed issue. If you approve
